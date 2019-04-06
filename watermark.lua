@@ -31,7 +31,7 @@ end
 
 local white_col = 255, 255, 255, 255
 
-function draw_container( x, y, w, h, spec)
+function draw_container( x, y, w, h)
 
     local c = {10, 60, 40, 40, 40, 60, 20};
 
