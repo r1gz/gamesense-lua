@@ -107,6 +107,7 @@ function on_paint( )
     local x = offset_x >= 0 and offset_x or screen_width + offset_x
     local y = offset_y >= 0 and offset_y or screen_height + offset_y
     local w, h = 270,50
+    if ui_get(watermark)
     draw_container( x-270, y, w, h)
     local x_text = x - w + 15
     local x_logo = x - w+w/2-23
@@ -140,6 +141,7 @@ function on_paint( )
     --tickrate
     local tickrate = 1/globals_tickinterval()
     renderer_text(x_text+185,y+23,255,255,255,255," ",0,"RATE: " .. tickrate)
+end
 end
 
 -- callbacks
