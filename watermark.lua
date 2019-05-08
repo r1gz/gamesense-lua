@@ -14,15 +14,23 @@ local ipairs, assert, pairs, next, tostring, tonumber, setmetatable, unpack, typ
 local offset_x, offset_y = -5, 5
 -- interfaces
 
-local antiut_reference = ui_reference("Misc", "Settings", "Anti-untrusted")
-local watermark = ui_new_checkbox("Visuals", "Effects", "Watermark")
+local reference = {
+  anti_untrusted = ui_reference("Misc", "Settings", "Anti-untrusted"),
+  watermark = ui_new_checkbox("Visuals", "Effects", "Watermark")
+}
+local screensize_x, screensize_y = client.screen_size();
+local x_mover = ui.new_slider("VISUALS", "Effects", "X Spectator List", 0, screensize_x, 1400, true, " ", 1)
+local y_mover = ui.new_slider("VISUALS", "Effects", "Y Spectator List", 0, screensize_y, 5, true, " ", 1)
+
+--local antiut_reference = ui_reference("Misc", "Settings", "Anti-untrusted")
+--local watermark = ui_new_checkbox("Visuals", "Effects", "Watermark")
 
 local frametimes = {}
 local fps_prev = 0
 local value_prev = {}
 local last_update_time = 0
 
-local function renderer_rect( x, y, w, h, r, g, b, a)
+renderer_outline = function(x, y, w, h, r, g, b, a)
     renderer.line(x, y, x+w, y, r, g, b, a)
     renderer.line(x, y, x, y+h, r, g, b, a)
     renderer.line(x, y+h, x+w, y+h, r, g, b, a)
@@ -31,116 +39,151 @@ end
 
 local white_col = 255, 255, 255, 255
 
-function draw_container( x, y, w, h)
+renderer_container = function( x, y, w, h, spec)
+  
+  local c = {10, 60, 40, 40, 40, 60, 20};
+  
+  for i = 0,6,1 do
+    renderer_outline( x+i, y+i, w-(i*2), h-(i*2),c[i+1], c[i+1], c[i+1], 200);
+  end
 
-    local c = {10, 60, 40, 40, 40, 60, 20};
+ -- transparency background
+ renderer_rectangle( x + 6, y + 6, w - 12, h - 12, 25, 25, 25, 245);
 
-    for i = 0,6,1 do
-        renderer_rect( x+i, y+i, w-(i*2), h-(i*2),c[i+1], c[i+1], c[i+1], 200);
-    end
+ -- creating rainbow variables
+ local r = math_floor( math_sin( globals_realtime() * 2) * 127 + 128 )
+ local g = math_floor( math_sin( globals_realtime() * 2 + 2 ) * 127 + 128 )
+ local b = math_floor( math_sin( globals_realtime() * 2 + 4 ) * 127 + 128 );
+ renderer_gradient(x + 10, y + 16, w- 20, 3,r, g, b, 255,b, g, r, 200, true)
+ renderer_rectangle( x + 10, y + 20, w - 20, h - 30,20, 20,20,245);
+ renderer_outline( x + 10, y + 20, w - 20, h - 30 , 40,40,40,245);
 
-    -- transparency background
-    renderer_rectangle( x + 6, y + 6, w - 12, h - 12, 25, 25, 25, 245);
-
-    -- creating rainbow variables
-    local r = math_floor( math_sin( globals_realtime() * 2) * 127 + 128 )
-    local g = math_floor( math_sin( globals_realtime() * 2 + 2 ) * 127 + 128 )
-    local b = math_floor( math_sin( globals_realtime() * 2 + 4 ) * 127 + 128 );
-    renderer_gradient(x + 10, y + 16, w- 20, 3,r, g, b, 255,b, g, r, 255, true)
-    --renderer_gradient(x + 10, y + 18, w- 20, 2,r, g, b, 125,b, g, r, 125, true)
-    renderer_rectangle( x + 10, y + 20, w - 20, h - 25,20, 20,20,245);
-    renderer_rect( x + 10, y + 20, w - 20, h - 30 , 40,40,40,245);
-
+ if spec then
+  renderer_text(x + w / 2 - 25 , y +7 ,255,255,255,255,"-",0,"S P E C T A T O R S :")
+ end
 end
 
-local function round(num, numDecimalPlaces)
-    local mult = 10^(numDecimalPlaces or 0)
-    if num >= 0 then return math.floor(num * mult + 0.5) / mult
-    else return math.ceil(num * mult - 0.5) / mult end
+round = function(num, numDecimalPlaces)
+  local mult = 10^(numDecimalPlaces or 0)
+  if num >= 0 then return math.floor(num * mult + 0.5) / mult
+  else return math.ceil(num * mult - 0.5) / mult end
 end
 
 
-local function accumulate_fps()
-    local rt, ft = globals_realtime(), globals_absoluteframetime()
+accumulate_fps = function()
+  local rt, ft = globals_realtime(), globals_absoluteframetime()
   
-    if ft > 0 then
-      table_insert(frametimes, 1, ft)
+  if ft > 0 then
+    table_insert(frametimes, 1, ft)
+  end
+  
+  local count = #frametimes
+  if count == 0 then
+    return 0
+  end
+  
+  local accum = 0
+  local i = 0
+  while accum < 0.5 do
+    i = i + 1
+    accum = accum + frametimes[i]
+    if i >= count then
+      break
     end
+  end
   
-    local count = #frametimes
-    if count == 0 then
-      return 0
-    end
+  accum = accum / i
   
-    local accum = 0
-    local i = 0
-    while accum < 0.5 do
-      i = i + 1
-      accum = accum + frametimes[i]
-      if i >= count then
-        break
-      end
-    end
+  while i < count do
+    i = i + 1
+    table_remove(frametimes)
+  end
   
-    accum = accum / i
+  local fps = 1 / accum
+  local time_since_update = rt - last_update_time
+  if math_abs(fps - fps_prev) > 4 or time_since_update > 1 then
+    fps_prev = fps
+    last_update_time = rt
+  else
+    fps = fps_prev
+  end
   
-    while i < count do
-      i = i + 1
-      table_remove(frametimes)
-    end
-  
-    local fps = 1 / accum
-    local time_since_update = rt - last_update_time
-    if math_abs(fps - fps_prev) > 4 or time_since_update > 1 then
-      fps_prev = fps
-      last_update_time = rt
-    else
-      fps = fps_prev
-    end
-  
-    return math_floor(fps + 0.5)
+  return math_floor(fps + 0.5)
 end
 
-function on_paint( )
-    local fps = accumulate_fps()
-    local screen_width, screen_height = client_screen_size()
-    local x = offset_x >= 0 and offset_x or screen_width + offset_x
-    local y = offset_y >= 0 and offset_y or screen_height + offset_y
-    local w, h = 270,50
-    if ui_get(watermark) then
-    draw_container( x-270, y, w, h)
+on_paint = function()
+  local fps = accumulate_fps()
+  local screen_width, screen_height = client_screen_size()
+  local x = offset_x >= 0 and offset_x or screen_width + offset_x
+  local y = offset_y >= 0 and offset_y or screen_height + offset_y
+  local w, h = 270,50
+  if ui_get(reference.watermark) then
+    renderer_container( x-270, y, w, h)
     local x_text = x - w + 15
     local x_logo = x - w+w/2-23
     local y_logo = y+7
     renderer_text(x_logo,y_logo,255,255,255,255,"-",0,"G A M E S E N S E")
-    -- fps
-    renderer_text(x_text,y+23,255,255,255,255," ",0,"FPS: " .. fps)
-    -- ping
-    local ping = math_min(999, client_latency() * 1000)
-    ping = round(ping, 0)
-    local ping_r, ping_g, ping_b = white_col
+-- fps
+renderer_text(x_text,y+23,255,255,255,255," ",0,"FPS: " .. fps)
+-- ping
+local ping = math_min(999, client_latency() * 1000)
+ping = round(ping, 0)
+local ping_r, ping_g, ping_b = white_col
+    
+local max_ping = 200
+if not ui_get(reference.anti_untrusted) then
+  max_ping = 100
+end
 
-    local max_ping = 200
-    if not ui_get(antiut_reference) then
-      max_ping = 100
-    end
+if ping > max_ping then
+  ping_r, ping_g, ping_b = 255, 0, 0
+end
+renderer_text(x_text+55,y+23,255,255,255,255," ",0,"PING: " .. ping)   
+--speed
+local local_player = entity_get_local_player()
+local vel_x, vel_y = entity_get_prop(local_player, "m_vecVelocity")
+if vel_x ~= nil then
+  local velocity = math_sqrt(vel_x*vel_x + vel_y*vel_y)
+  velocity = math_min(9999, velocity) + 0.2
+  velocity = round(velocity, 0)
+  renderer_text(x_text+115,y+23,255,255,255,255," ",0,"SPEED: " .. velocity)
+end
+--tickrate
+local tickrate = 1/globals_tickinterval()
+renderer_text(x_text+185,y+23,255,255,255,255," ",0,"RATE: " .. tickrate)
 
-    if ping > max_ping then
-      ping_r, ping_g, ping_b = 255, 0, 0
-    end
-    renderer_text(x_text+55,y+23,255,255,255,255," ",0,"PING: " .. ping)
-    --speed
-    local local_player = entity_get_local_player()
-      local vel_x, vel_y = entity_get_prop(local_player, "m_vecVelocity")
-      if vel_x ~= nil then
-        local velocity = math_sqrt(vel_x*vel_x + vel_y*vel_y)
-        velocity = math_min(9999, velocity) + 0.2
-        velocity = round(velocity, 0)
-        renderer_text(x_text+115,y+23,255,255,255,255," ",0,"SPEED: " .. velocity)
+local screen_width, screen_height = ui_get(x_mover), ui_get(y_mover)
+local menu = ui.is_menu_open(true)
+local spectators = {}
+for player =1, globals.maxplayers() do
+  if entity.get_classname(player) == "CCSPlayer" then
+    local observer_target = entity.get_prop(player, "m_hObserverTarget")
+    if observer_target ~= nil then
+      if spectators[observer_target] == nil then
+        spectators[observer_target] = {}
       end
-    --tickrate
-    local tickrate = 1/globals_tickinterval()
-    renderer_text(x_text+185,y+23,255,255,255,255," ",0,"RATE: " .. tickrate)
+      table.insert(spectators[observer_target], player)
+    end
+  end
+end
+  
+local local_player = entity.get_local_player()
+local my_spectators = {}
+local widthspec = 30
+local a = 0
+
+for player=1, globals.maxplayers() do
+  if not entity.is_dormant(player) and entity_get_prop(player, "m_hObserverTarget") == local_player then
+    table.insert(my_spectators, entity.get_player_name(player))
+  end
+end
+  for i=1, #my_spectators do
+    widthspec = i * 16 + 40
+  end
+  renderer_container(screen_width, screen_height, 200,  widthspec,true)
+  for i=1, #my_spectators do
+    renderer.text(screen_width + 100, screen_height + 15 + i * 16, 255,255,255,255, "c", 0, my_spectators[i])
+  end
 end
 end
 
