@@ -22,9 +22,6 @@ local screensize_x, screensize_y = client.screen_size();
 local x_mover = ui.new_slider("VISUALS", "Effects", "X Spectator List", 0, screensize_x, 1400, true, " ", 1)
 local y_mover = ui.new_slider("VISUALS", "Effects", "Y Spectator List", 0, screensize_y, 5, true, " ", 1)
 
---local antiut_reference = ui_reference("Misc", "Settings", "Anti-untrusted")
---local watermark = ui_new_checkbox("Visuals", "Effects", "Watermark")
-
 local frametimes = {}
 local fps_prev = 0
 local value_prev = {}
