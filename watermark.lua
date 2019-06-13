@@ -1,5 +1,5 @@
 --local variables for API functions. Generated using https://github.com/sapphyrus/gamesense-lua/blob/master/generate_api.lua
-local client_userid_to_entindex, client_set_event_callback, client_screen_size, client_trace_bullet, client_unset_event_callback, client_scale_damage, client_get_cvar, client_random_int, client_latency, client_set_clan_tag, client_log, client_timestamp, client_trace_line, client_random_float, client_draw_debug_text, client_delay_call, client_visible, client_exec, client_eye_position, client_set_cvar, client_error_log, client_draw_hitboxes, client_camera_angles, client_system_time, client_color_log, client_reload_active_scripts = client.userid_to_entindex, client.set_event_callback, client.screen_size, client.trace_bullet, client.unset_event_callback, client.scale_damage, client.get_cvar, client.random_int, client.latency, client.set_clan_tag, client.log, client.timestamp, client.trace_line, client.random_float, client.draw_debug_text, client.delay_call, client.visible, client.exec, client.eye_position, client.set_cvar, client.error_log, client.draw_hitboxes, client.camera_angles, client.system_time, client.color_log, client.reload_active_scripts
+local client_userid_to_entindex, client_set_event_callback, client_screen_size, client_trace_bullet, client_unset_event_callback, client_color_log, client_scale_damage, client_get_cvar, client_key_state, client_create_interface, client_random_int, client_latency, client_set_clan_tag, client_find_signature, client_log, client_timestamp, client_trace_line, client_random_float, client_draw_debug_text, client_visible, client_exec, client_delay_call, client_set_cvar, client_error_log, client_draw_hitboxes, client_eye_position, client_camera_angles, client_system_time, client_reload_active_scripts, client_update_player_list = client.userid_to_entindex, client.set_event_callback, client.screen_size, client.trace_bullet, client.unset_event_callback, client.color_log, client.scale_damage, client.get_cvar, client.key_state, client.create_interface, client.random_int, client.latency, client.set_clan_tag, client.find_signature, client.log, client.timestamp, client.trace_line, client.random_float, client.draw_debug_text, client.visible, client.exec, client.delay_call, client.set_cvar, client.error_log, client.draw_hitboxes, client.eye_position, client.camera_angles, client.system_time, client.reload_active_scripts, client.update_player_list
 local entity_get_player_resource, entity_get_local_player, entity_is_enemy, entity_get_bounding_box, entity_is_dormant, entity_get_steam64, entity_get_player_name, entity_hitbox_position, entity_get_game_rules, entity_get_all, entity_set_prop, entity_is_alive, entity_get_player_weapon, entity_get_prop, entity_get_players, entity_get_classname = entity.get_player_resource, entity.get_local_player, entity.is_enemy, entity.get_bounding_box, entity.is_dormant, entity.get_steam64, entity.get_player_name, entity.hitbox_position, entity.get_game_rules, entity.get_all, entity.set_prop, entity.is_alive, entity.get_player_weapon, entity.get_prop, entity.get_players, entity.get_classname
 local globals_realtime, globals_absoluteframetime, globals_tickcount, globals_lastoutgoingcommand, globals_curtime, globals_mapname, globals_tickinterval, globals_framecount, globals_frametime, globals_maxplayers = globals.realtime, globals.absoluteframetime, globals.tickcount, globals.lastoutgoingcommand, globals.curtime, globals.mapname, globals.tickinterval, globals.framecount, globals.frametime, globals.maxplayers
 local ui_new_slider, ui_new_combobox, ui_reference, ui_set_visible, ui_new_textbox, ui_new_color_picker, ui_new_checkbox, ui_mouse_position, ui_new_listbox, ui_new_multiselect, ui_is_menu_open, ui_new_hotkey, ui_set, ui_new_button, ui_set_callback, ui_name, ui_get = ui.new_slider, ui.new_combobox, ui.reference, ui.set_visible, ui.new_textbox, ui.new_color_picker, ui.new_checkbox, ui.mouse_position, ui.new_listbox, ui.new_multiselect, ui.is_menu_open, ui.new_hotkey, ui.set, ui.new_button, ui.set_callback, ui.name, ui.get
@@ -18,52 +18,61 @@ local reference = {
   anti_untrusted = ui_reference("Misc", "Settings", "Anti-untrusted"),
   watermark = ui_new_checkbox("Visuals", "Effects", "Watermark")
 }
-local screensize_x, screensize_y = client.screen_size();
-local x_mover = ui.new_slider("VISUALS", "Effects", "X Spectator List", 0, screensize_x, 1400, true, " ", 1)
-local y_mover = ui.new_slider("VISUALS", "Effects", "Y Spectator List", 0, screensize_y, 5, true, " ", 1)
+local screen_size = { client_screen_size() }
+local x_mover = ui.new_slider("VISUALS", "Effects", "X Spectator List", 0, screen_size[1], 1360, true, " ", 1)
+local y_mover = ui.new_slider("VISUALS", "Effects", "Y Spectator List", 0, screen_size[2], 15, true, " ", 1)
+
 
 local frametimes = {}
 local fps_prev = 0
 local value_prev = {}
 local last_update_time = 0
 
-renderer_outline = function(x, y, w, h, r, g, b, a)
+local white_col = 255, 255, 255, 255
+
+local text = function(x,y,format,text)
+  return renderer_text(x,y,255,255,255,255,format,0,text)
+end
+
+renderer_container = function( x, y, w, h)
+  
+  local c = {10, 60, 40, 40, 40, 60, 20};
+
+  local renderer_outline = function(x, y, w, h, r, g, b, a)
     renderer.line(x, y, x+w, y, r, g, b, a)
     renderer.line(x, y, x, y+h, r, g, b, a)
     renderer.line(x, y+h, x+w, y+h, r, g, b, a)
     renderer.line(x+w, y+h, x+w, y, r, g, b, a)
-end
-
-local white_col = 255, 255, 255, 255
-
-renderer_container = function( x, y, w, h, spec)
-  
-  local c = {10, 60, 40, 40, 40, 60, 20};
+  end
   
   for i = 0,6,1 do
     renderer_outline( x+i, y+i, w-(i*2), h-(i*2),c[i+1], c[i+1], c[i+1], 200);
   end
 
  -- transparency background
+
  renderer_rectangle( x + 6, y + 6, w - 12, h - 12, 25, 25, 25, 245);
 
  -- creating rainbow variables
- local r = math_floor( math_sin( globals_realtime() * 2) * 127 + 128 )
- local g = math_floor( math_sin( globals_realtime() * 2 + 2 ) * 127 + 128 )
- local b = math_floor( math_sin( globals_realtime() * 2 + 4 ) * 127 + 128 );
- renderer_gradient(x + 10, y + 16, w- 20, 3,r, g, b, 255,b, g, r, 200, true)
+
+ local color = {
+   math_floor( math_sin( globals_realtime() * 2) * 127 + 128 ),
+   math_floor( math_sin( globals_realtime() * 2 + 2 ) * 127 + 128 ),
+   math_floor( math_sin( globals_realtime() * 2 + 4 ) * 127 + 128 )
+ }
+
+ renderer_gradient(x + 10, y + 16, w- 20, 3,color[1], color[2], color[3], 255,color[3], color[2], color[1], 255, true)
  renderer_rectangle( x + 10, y + 20, w - 20, h - 30,20, 20,20,245);
  renderer_outline( x + 10, y + 20, w - 20, h - 30 , 40,40,40,245);
 
- if spec then
-  renderer_text(x + w / 2 - 25 , y +7 ,255,255,255,255,"-",0,"S P E C T A T O R S :")
- end
 end
 
 round = function(num, numDecimalPlaces)
+
   local mult = 10^(numDecimalPlaces or 0)
   if num >= 0 then return math.floor(num * mult + 0.5) / mult
   else return math.ceil(num * mult - 0.5) / mult end
+
 end
 
 
@@ -108,82 +117,118 @@ accumulate_fps = function()
   return math_floor(fps + 0.5)
 end
 
-on_paint = function()
-  local fps = accumulate_fps()
-  local screen_width, screen_height = client_screen_size()
-  local x = offset_x >= 0 and offset_x or screen_width + offset_x
-  local y = offset_y >= 0 and offset_y or screen_height + offset_y
-  local w, h = 270,50
-  if ui_get(reference.watermark) then
-    renderer_container( x-270, y, w, h)
-    local x_text = x - w + 15
-    local x_logo = x - w+w/2-23
-    local y_logo = y+7
-    renderer_text(x_logo,y_logo,255,255,255,255,"-",0,"G A M E S E N S E")
+client.set_event_callback("paint", function()
+local fps = accumulate_fps()
+
+local x = offset_x >= 0 and offset_x or screen_size[1] + offset_x
+local y = offset_y >= 0 and offset_y or screen_size[2] + offset_y
+
+local w, h = 270,50
+
+if ui_get(reference.watermark) then
+
+  renderer_container( x-270, y, w, h)
+
+  local x_text = x - w + 15
+  local x_logo = x - w+w/2-23
+  local y_logo = y+7
+
+  text(x_logo,y_logo,"-",string_upper("g a m e s e n s e"))
+
 -- fps
-renderer_text(x_text,y+23,255,255,255,255," ",0,"FPS: " .. fps)
+
+  text(x_text,y+23," ","FPS: " .. fps)
+
 -- ping
-local ping = math_min(999, client_latency() * 1000)
-ping = round(ping, 0)
-local ping_r, ping_g, ping_b = white_col
-    
-local max_ping = 200
-if not ui_get(reference.anti_untrusted) then
-  max_ping = 100
-end
 
-if ping > max_ping then
-  ping_r, ping_g, ping_b = 255, 0, 0
-end
-renderer_text(x_text+55,y+23,255,255,255,255," ",0,"PING: " .. ping)   
+  local ping = math_min(999, client_latency() * 1000)
+  ping = round(ping, 0)
+  local ping_r, ping_g, ping_b = white_col
+  local max_ping = 200
+
+  if not ui_get(reference.anti_untrusted) then
+    max_ping = 100
+  end
+
+  if ping > max_ping then
+    ping_r, ping_g, ping_b = 255, 0, 0
+  end
+
+  text(x_text+55,y+23," ","PING: " .. ping)
+
 --speed
-local local_player = entity_get_local_player()
-local vel_x, vel_y = entity_get_prop(local_player, "m_vecVelocity")
-if vel_x ~= nil then
-  local velocity = math_sqrt(vel_x*vel_x + vel_y*vel_y)
-  velocity = math_min(9999, velocity) + 0.2
-  velocity = round(velocity, 0)
-  renderer_text(x_text+115,y+23,255,255,255,255," ",0,"SPEED: " .. velocity)
-end
---tickrate
-local tickrate = 1/globals_tickinterval()
-renderer_text(x_text+185,y+23,255,255,255,255," ",0,"RATE: " .. tickrate)
 
-local screen_width, screen_height = ui_get(x_mover), ui_get(y_mover)
-local menu = ui.is_menu_open(true)
+  local local_player = entity_get_local_player()
+  local vel_x, vel_y = entity_get_prop(local_player, "m_vecVelocity")
+
+  if vel_x ~= nil then
+    local velocity = math_sqrt(vel_x*vel_x + vel_y*vel_y)
+
+    velocity = math_min(9999, velocity) + 0.2
+    velocity = round(velocity, 0)
+
+    text(x_text+115,y+23," ","SPEED: " .. velocity)
+  end
+
+--tickrate
+
+  local tickrate = 1/globals_tickinterval()
+
+  text(x_text+185,y+23," ","RATE: " .. tickrate)
+
+  local spec_screensize = {
+  ui_get(x_mover),
+  ui_get(y_mover)
+}
+
+--[[indicators
+local w_aa, h_aa = 100,80
+renderer_container(x-105, y+screen_size[2]/2,100,80)
+text(x-(x-105)/2,y+screen_size[2]/2,"c", huy)]]
+
+--specators
+
 local spectators = {}
-for player =1, globals.maxplayers() do
-  if entity.get_classname(player) == "CCSPlayer" then
-    local observer_target = entity.get_prop(player, "m_hObserverTarget")
-    if observer_target ~= nil then
-      if spectators[observer_target] == nil then
-        spectators[observer_target] = {}
+
+  for player =1, globals.maxplayers() do
+    if entity.get_classname(player) == "CCSPlayer" then
+      local observer_target = entity.get_prop(player, "m_hObserverTarget")
+      if observer_target ~= nil then
+        if spectators[observer_target] == nil then
+          spectators[observer_target] = {}
+        end
+        table.insert(spectators[observer_target], player)
       end
-      table.insert(spectators[observer_target], player)
     end
   end
-end
   
-local local_player = entity.get_local_player()
-local my_spectators = {}
-local widthspec = 30
-local a = 0
+  local local_player = entity.get_local_player()
+  local my_spectators = {}
+  local widthspec = 30
+  local total_spectators = 0
+  local a = 0
 
-for player=1, globals.maxplayers() do
-  if not entity.is_dormant(player) and entity_get_prop(player, "m_hObserverTarget") == local_player then
-    table.insert(my_spectators, entity.get_player_name(player))
+  for player=1, globals.maxplayers() do
+    if not entity.is_dormant(player) and entity_get_prop(player, "m_hObserverTarget") == local_player then
+      table.insert(my_spectators, entity.get_player_name(player))
+    end
   end
-end
+
   for i=1, #my_spectators do
     widthspec = i * 16 + 40
+    total_spectators = i
   end
-  renderer_container(screen_width, screen_height, 200,  widthspec,true)
+  if total_spectators > 0 then
+  renderer_container(spec_screensize[1], spec_screensize[2], 200,  widthspec)
+  text(spec_screensize[1] + 70 , spec_screensize[2] +7 ,"-",string_upper("s p e c t a t o r s") .. "( " .. total_spectators .. " )")
+
   for i=1, #my_spectators do
-    renderer.text(screen_width + 100, screen_height + 15 + i * 16, 255,255,255,255, "c", 0, my_spectators[i])
+    text(spec_screensize[1] + 100, spec_screensize[2] + 15 + i * 16,"c",my_spectators[i])
   end
-end
 end
 
+end
+end)
+
 -- callbacks
-client.set_event_callback("paint", on_paint )
 -- end of the code
