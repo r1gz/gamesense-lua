@@ -14,14 +14,20 @@ local ipairs, assert, pairs, next, tostring, tonumber, setmetatable, unpack, typ
 local offset_x, offset_y = -5, 5
 -- interfaces
 
-local reference = {
-  anti_untrusted = ui_reference("Misc", "Settings", "Anti-untrusted"),
-  watermark = ui_new_checkbox("Visuals", "Effects", "Watermark")
-}
 local screen_size = { client_screen_size() }
-local x_mover = ui.new_slider("VISUALS", "Effects", "X Spectator List", 0, screen_size[1], 1360, true, " ", 1)
-local y_mover = ui.new_slider("VISUALS", "Effects", "Y Spectator List", 0, screen_size[2], 15, true, " ", 1)
 
+local menu = {
+  anti_untrusted = ui_reference("Misc", "Settings", "Anti-untrusted"),
+  watermark = ui_new_checkbox("Visuals", "Effects", "Watermark"),
+  drag_key = ui_new_hotkey("Visuals", "Effects", "Watermark", true),
+      -- Menu data
+      x_axis = ui.new_slider("VISUALS", "Effects", "\n spectator_posx", 0, 8192, 350, false),
+      y_axis = ui.new_slider("VISUALS", "Effects", "\n spectator_posy", 0, 8192, 5, false),
+  
+      size = { 245, 150 },
+      is_dragging = false,
+      drag_x = 0, drag_y = 0,
+}
 
 local frametimes = {}
 local fps_prev = 0
@@ -61,10 +67,9 @@ renderer_container = function( x, y, w, h)
    math_floor( math_sin( globals_realtime() * 2 + 4 ) * 127 + 128 )
  }
 
- renderer_gradient(x + 10, y + 16, w- 20, 3,color[1], color[2], color[3], 255,color[3], color[2], color[1], 255, true)
+ renderer_gradient(x + 10, y + 16, w- 20, 2,color[1], color[2], color[3], 255,color[3], color[2], color[1], 255, true)
  renderer_rectangle( x + 10, y + 20, w - 20, h - 30,20, 20,20,245);
  renderer_outline( x + 10, y + 20, w - 20, h - 30 , 40,40,40,245);
-
 end
 
 round = function(num, numDecimalPlaces)
@@ -123,21 +128,19 @@ local fps = accumulate_fps()
 local x = offset_x >= 0 and offset_x or screen_size[1] + offset_x
 local y = offset_y >= 0 and offset_y or screen_size[2] + offset_y
 
-local w, h = 270,50
+local size ={ 270,50 }
 
-if ui_get(reference.watermark) then
+if ui_get(menu.watermark) then
 
-  renderer_container( x-270, y, w, h)
+  renderer_container( x-270, y, size[1], size[2])
 
-  local x_text = x - w + 15
-  local x_logo = x - w+w/2-23
-  local y_logo = y+7
+  local pos = {x - w + 15, x - w+w/2-23, y+7 }
 
-  text(x_logo,y_logo,"-",string_upper("g a m e s e n s e"))
+  text(pos[2],pos[3],"-",string_upper("g a m e s e n s e"))
 
 -- fps
 
-  text(x_text,y+23," ","FPS: " .. fps)
+  text(pos[1],y+23," ","FPS: " .. fps)
 
 -- ping
 
@@ -146,7 +149,7 @@ if ui_get(reference.watermark) then
   local ping_r, ping_g, ping_b = white_col
   local max_ping = 200
 
-  if not ui_get(reference.anti_untrusted) then
+  if not ui_get(menu.anti_untrusted) then
     max_ping = 100
   end
 
@@ -154,7 +157,7 @@ if ui_get(reference.watermark) then
     ping_r, ping_g, ping_b = 255, 0, 0
   end
 
-  text(x_text+55,y+23," ","PING: " .. ping)
+  text(pos[1]+55,y+23," ","PING: " .. ping)
 
 --speed
 
@@ -167,24 +170,16 @@ if ui_get(reference.watermark) then
     velocity = math_min(9999, velocity) + 0.2
     velocity = round(velocity, 0)
 
-    text(x_text+115,y+23," ","SPEED: " .. velocity)
+    text(pos[1]+115,y+23," ","SPEED: " .. velocity)
   end
 
 --tickrate
 
   local tickrate = 1/globals_tickinterval()
 
-  text(x_text+185,y+23," ","RATE: " .. tickrate)
+  text(pos[1]+185,y+23," ","RATE: " .. tickrate)
 
-  local spec_screensize = {
-  ui_get(x_mover),
-  ui_get(y_mover)
-}
-
---[[indicators
-local w_aa, h_aa = 100,80
-renderer_container(x-105, y+screen_size[2]/2,100,80)
-text(x-(x-105)/2,y+screen_size[2]/2,"c", huy)]]
+  local spec_screensize = { ui_get(menu.x_axis), ui_get(menu.y_axis) }
 
 --specators
 
@@ -226,9 +221,58 @@ local spectators = {}
     text(spec_screensize[1] + 100, spec_screensize[2] + 15 + i * 16,"c",my_spectators[i])
   end
 end
-
+if ui.is_menu_open() then
+  renderer_container(spec_screensize[1], spec_screensize[2], 200,  50)
+  text(spec_screensize[1] + 70 , spec_screensize[2] +7 ,"-",string_upper("s p e c t a t o r s"))
+end
 end
 end)
 
+client.set_event_callback("paint", function()
+  ui_set(menu.drag_key, "On hotkey")
+
+  if not ui_get(menu.watermark) then
+      return
+  end
+
+  local mouse_in_rect = function(x1, y1, x2, y2)
+      local mouse_position = { ui_mouse_position() }
+      return (mouse_position[1] >= x1 and mouse_position[1] <= x2 and mouse_position[2] >= y1 and mouse_position[2] <= y2)
+  end
+
+  local mouse_position = { ui_mouse_position() }
+  local key_state = ui.is_menu_open() and ui_get(menu.drag_key)
+
+  if menu.is_dragging and not key_state then
+      menu.is_dragging = false
+      menu.drag_x = 0
+      menu.drag_y = 0
+      return
+  end
+
+  if menu.is_dragging then
+      local end_x, end_y = 
+          mouse_position[1] - menu.drag_x,
+          mouse_position[2] - menu.drag_y
+
+      if end_x > 0 then ui_set(menu.x_axis, end_x) end
+      if end_y > 0 then ui_set(menu.y_axis, end_y) end
+  end
+
+  local mpos = {
+      ui_get(menu.x_axis),
+      ui_get(menu.y_axis)
+  }
+
+  if key_state and mouse_in_rect(mpos[1], mpos[2], mpos[1] + menu.size[1], mpos[2] + menu.size[2]) then
+      menu.is_dragging = true
+
+      menu.drag_x = mouse_position[1] - ui_get(menu.x_axis)
+      menu.drag_y = mouse_position[2] - ui_get(menu.y_axis)
+  end
+end)
+
 -- callbacks
+ui.set_visible(menu.x_axis, false)
+ui.set_visible(menu.y_axis, false)
 -- end of the code
