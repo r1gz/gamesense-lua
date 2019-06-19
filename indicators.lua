@@ -28,7 +28,7 @@ local menu = {
 
 -- MENU REFERENCE
 local vec_data, flip = { }, true
-local elems = { "Lag compensation", "Ping spike","Choke" }
+local elems = { "Lag compensation","Choke", "Ping spike" }
 local ping, ping_hk = ui.reference("MISC", "Miscellaneous", "Ping spike")
 
 local is_active = ui.new_multiselect("VISUALS", "Effects", "Indicators", elems)
@@ -152,10 +152,13 @@ client.set_event_callback("paint", function()
     if ui_get(menu.indicators) then
 
         if contains(is_active, elems[1]) or contains(is_active, elems[2]) or contains(is_active, elems[3]) then
-            for i=1,3 do
+            for i=1,2 do
             if contains(is_active, elems[i]) then
                 size[2] = size[2] + 15
             end
+        end
+        if contains(is_active, elems[3]) and is_pingspiking() then
+            size[2] = size[2] + 15
         end
             renderer_container( axis[1], axis[2], size[1], size[2])
             local text = string_upper("i n d i c a t o r s")
@@ -196,7 +199,7 @@ client.set_event_callback("paint", function()
 
         -- PING SPIKE
         local ping = function()
-        if contains(is_active, elems[2]) then
+        if contains(is_active, elems[3]) and is_pingspiking() then
             local latency, cl = ping_state(g_Local, pingspike)
             local text = string_upper("p i n g")
             local width, height = renderer_measure_text("-", text)
@@ -209,7 +212,7 @@ client.set_event_callback("paint", function()
     ping()
 
     local choke = function()
-        if contains(is_active, elems[3]) then
+        if contains(is_active, elems[2]) then
             local text = string_upper("c h o k e")
             local width, height = renderer_measure_text("-", text)
             renderer_text(axis[1] + 15, y-2, "-", text)
