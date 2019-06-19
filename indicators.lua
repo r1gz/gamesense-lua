@@ -31,8 +31,8 @@ local vec_data, flip = { }, true
 local elems = { "Lag compensation", "Ping spike","Choke" }
 local ping, ping_hk = ui.reference("MISC", "Miscellaneous", "Ping spike")
 
-local is_active = ui.new_multiselect("MISC", "Settings", "Indicators", elems)
-local picker = ui.new_color_picker("MISC", "Settings", "Indicator picker", 160, 245, 65)
+local is_active = ui.new_multiselect("VISUALS", "Effects", "Indicators", elems)
+local picker = ui.new_color_picker("VISUALS", "Effects", "Indicator picker", 160, 245, 65)
 
 local choked_cmd = 0
 
@@ -266,6 +266,6 @@ client.set_event_callback("paint", function()
 end)
 
 -- callbacks
-ui.set_visible(menu.x_axis, true)
-ui.set_visible(menu.y_axis, true)
+ui.set_visible(menu.x_axis, false)
+ui.set_visible(menu.y_axis, false)
 -- end of the code
