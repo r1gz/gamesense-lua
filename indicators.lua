@@ -21,7 +21,7 @@ local menu = {
       x_axis = ui.new_slider("VISUALS", "Effects", "\n indicators_posx", 0, 8192, 350, false),
       y_axis = ui.new_slider("VISUALS", "Effects", "\n indicators_posy", 0, 8192, 5, false),
   
-      size = { 200, 35 },
+      size = { 215, 35 },
       is_dragging = false,
       ind_x = 0, ind_y = 0,
 }
@@ -43,8 +43,8 @@ local renderer_text = function(x,y,format,text)
 end
 local draw_indicator = function(text, x, y, w, process, r, g, b)
     local text_ind = string_upper(text)
-    local _, h = renderer_measure_text("-", text_ind)
-    renderer_text(x-55, y-2, "-", text_ind)
+    local _, h = renderer_measure_text(nil, text_ind)
+    renderer_text(x-70, y-2, nil, text_ind)
     renderer_rectangle( x, y, w, h/2, 5, 0, 0, 255)
     renderer_rectangle( x, y, process, h/2, r, g, b, 255)
 end
@@ -178,7 +178,7 @@ client.set_event_callback("paint", function()
         end
 
         local r, g, b = ui.get(picker)
-        local x, y =  axis[1] + 70, axis[2] + 27
+        local x, y =  axis[1] + 85, axis[2] + 27
         
         -- LAG COMP
         local lagcomp = function()
@@ -191,7 +191,7 @@ client.set_event_callback("paint", function()
                     lag_dst = lag_dst < 0 and 0 or lag_dst / 30
                     lag_dst = lag_dst > 62 and 62 or lag_dst
 
-                    draw_indicator("l a g c o m p", x, y, 115, lag_dst, r, g, b)
+                    draw_indicator("lagcomp", x, y, 115, lag_dst, r, g, b)
                     y = y + 15
                 end
             end
@@ -202,7 +202,7 @@ client.set_event_callback("paint", function()
         local ping = function()
             if contains(is_active, elems[3]) and is_pingspiking() then
                 local latency, cl = ping_state(g_Local, pingspike)
-                draw_indicator("p i n g", x, y, 115, latency*2.3, r, g, b)
+                draw_indicator("ping", x, y, 115, latency*2.4, r, g, b)
                 y = y + 15
             end
         end
@@ -210,7 +210,7 @@ client.set_event_callback("paint", function()
 
         local choke = function()
             if contains(is_active, elems[2]) then
-                draw_indicator("c h o k e", x, y, 115, choked_cmd/0.12, r, g, b)
+                draw_indicator("choke", x, y, 115, choked_cmd/0.12, r, g, b)
             end
         end
         choke()
