@@ -134,7 +134,7 @@ if ui_get(menu.watermark) then
 
   renderer_container( x-270, y, size[1], size[2])
 
-  local pos = {x - w + 15, x - w+w/2-23, y+7 }
+  local pos = {x - size[1] + 15, x - size[1]+size[1]/2-23, y+7 }
 
   text(pos[2],pos[3],"-",string_upper("g a m e s e n s e"))
 
