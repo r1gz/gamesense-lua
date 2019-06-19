@@ -41,6 +41,13 @@ local white_col = 255, 255, 255, 255
 local renderer_text = function(x,y,format,text)
     return renderer.text(x,y,255,255,255,255,format,0,text)
 end
+local draw_indicator = function(text, x, y, w, process, r, g, b)
+    local text_ind = string_upper(text)
+    local _, h = renderer_measure_text("-", text_ind)
+    renderer_text(x-55, y-2, "-", text_ind)
+    renderer_rectangle( x, y, w, h/2, 5, 0, 0, 255)
+    renderer_rectangle( x, y, process, h/2, r, g, b, 255)
+end
 
 renderer_container = function( x, y, w, h)
   
@@ -149,23 +156,22 @@ client.set_event_callback("paint", function()
     local axis = {ui_get(menu.x_axis), ui_get(menu.y_axis)}
     local size = { menu.size[1], menu.size[2] }
 
-    if ui_get(menu.indicators) then
-
+    if ui_get(menu.indicators) then     
         if contains(is_active, elems[1]) or contains(is_active, elems[2]) or contains(is_active, elems[3]) then
             for i=1,2 do
-            if contains(is_active, elems[i]) then
+                if contains(is_active, elems[i]) then
+                    size[2] = size[2] + 15
+                end
+            end
+            if contains(is_active, elems[3]) and is_pingspiking() then
                 size[2] = size[2] + 15
             end
-        end
-        if contains(is_active, elems[3]) and is_pingspiking() then
-            size[2] = size[2] + 15
-        end
             renderer_container( axis[1], axis[2], size[1], size[2])
             local text = string_upper("i n d i c a t o r s")
             local width, height = renderer_measure_text("-", text)
             renderer_text(axis[1] + menu.size[1]/2 - width/2,axis[2] + height/.5-14, "-", text )
         end
-
+        
         local g_Local = entity.get_local_player()
         if g_Local == nil or not entity.is_alive(g_Local) then
             return
@@ -173,54 +179,41 @@ client.set_event_callback("paint", function()
 
         local r, g, b = ui.get(picker)
         local x, y =  axis[1] + 70, axis[2] + 27
-
+        
         -- LAG COMP
         local lagcomp = function()
-        if contains(is_active, elems[1]) then
-            if (vec_data[0] and vec_data[1]) then
-            local shoud_break = get_player_velocity(g_Local) > 280
-            local lag_dst = Length2DSqr(vecMvec(vec_data[0], vec_data[1]))
+            if contains(is_active, elems[1]) then
+                if (vec_data[0] and vec_data[1]) then
+                    local shoud_break = get_player_velocity(g_Local) > 280
+                    local lag_dst = Length2DSqr(vecMvec(vec_data[0], vec_data[1]))
+        
+                    lag_dst = lag_dst - 64 * 64 -- m_flTeleportDistanceSqr (4096)
+                    lag_dst = lag_dst < 0 and 0 or lag_dst / 30
+                    lag_dst = lag_dst > 62 and 62 or lag_dst
 
-            lag_dst = lag_dst - 64 * 64 -- m_flTeleportDistanceSqr (4096)
-            lag_dst = lag_dst < 0 and 0 or lag_dst / 30
-            lag_dst = lag_dst > 62 and 62 or lag_dst
-
-
-            local text = string_upper("l a g c o m p")
-            local width, height = renderer_measure_text("-", text)
-            renderer_text(axis[1] + 15, axis[2] + 25, "-", text)
-            renderer_rectangle( x, y, 115, height/2, 5, 0, 0, 255)
-            renderer_rectangle( x, y, lag_dst, height/2, r, g, b, 255)
-            y = y + 15
+                    draw_indicator("l a g c o m p", x, y, 115, lag_dst, r, g, b)
+                    y = y + 15
+                end
             end
         end
-    end
-    lagcomp()
-
+        lagcomp()
+        
         -- PING SPIKE
         local ping = function()
-        if contains(is_active, elems[3]) and is_pingspiking() then
-            local latency, cl = ping_state(g_Local, pingspike)
-            local text = string_upper("p i n g")
-            local width, height = renderer_measure_text("-", text)
-            renderer_text(axis[1] + 15, y-2, "-", text)
-            renderer_rectangle( x, y, 115, height/2, 5, 0, 0, 255)
-            renderer_rectangle( x, y, latency*2.3, height/2, r, g, b, 255)
-            y = y + 15
+            if contains(is_active, elems[3]) and is_pingspiking() then
+                local latency, cl = ping_state(g_Local, pingspike)
+                draw_indicator("p i n g", x, y, 115, latency*2.3, r, g, b)
+                y = y + 15
+            end
         end
-    end
-    ping()
+        ping()
 
-    local choke = function()
-        if contains(is_active, elems[2]) then
-            local text = string_upper("c h o k e")
-            local width, height = renderer_measure_text("-", text)
-            renderer_text(axis[1] + 15, y-2, "-", text)
-            renderer_rectangle( x, y, 115, height/2, 5, 0, 0, 255)
-            renderer_rectangle( x, y, choked_cmd/0.12, height/2, r, g, b, 255)
+        local choke = function()
+            if contains(is_active, elems[2]) then
+                draw_indicator("c h o k e", x, y, 115, choked_cmd/0.12, r, g, b)
+            end
         end
-    end
-    choke()
+        choke()
     end
 
 end)
