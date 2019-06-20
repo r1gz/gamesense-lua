@@ -156,7 +156,11 @@ client.set_event_callback("paint", function()
     local axis = {ui_get(menu.x_axis), ui_get(menu.y_axis)}
     local size = { menu.size[1], menu.size[2] }
 
-    if ui_get(menu.indicators) then     
+    if ui_get(menu.indicators) then  
+        local g_Local = entity.get_local_player()
+        if g_Local == nil or not entity.is_alive(g_Local) then
+            return
+        end   
         if contains(is_active, elems[1]) or contains(is_active, elems[2]) or contains(is_active, elems[3]) then
             for i=1,2 do
                 if contains(is_active, elems[i]) then
@@ -172,10 +176,6 @@ client.set_event_callback("paint", function()
             renderer_text(axis[1] + menu.size[1]/2 - width/2,axis[2] + height/.5-14, "-", text )
         end
         
-        local g_Local = entity.get_local_player()
-        if g_Local == nil or not entity.is_alive(g_Local) then
-            return
-        end
 
         local r, g, b = ui.get(picker)
         local x, y =  axis[1] + 85, axis[2] + 27
